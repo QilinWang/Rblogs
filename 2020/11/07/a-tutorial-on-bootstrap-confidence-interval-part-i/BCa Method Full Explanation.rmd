@@ -1,0 +1,192 @@
+---
+title: "BCa explanation doc."
+author: "Qilin Wang"
+date: "2/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Technical Part
+# BCA (bias-corrected-accelated) Bootstrap 
+
+## Theory
+
+Let 
+
+$x:=(x_{1},...,x_{n})$ be a random sample from a continuous distribution F, 
+
+$\theta:=t(F)$ be a real-valued parameter of interest, 
+
+$\hat\theta= t(x)$ (based on data) and $\hat F$ be the estimates of $\theta$ and F, then
+
+(a) generate bootstrap data $x^{\star}$ by resampling ${\hat F}$.
+
+(b) compute $t(x^{\star})$ and call it $t^{\star}$.
+
+(c) Repeat (a) and (b) B times. Denote G the true distribution function of $t(x^{\star})$, and $\hat G$ its estimators based on $t_{1}^{\star}, t_{2}^{\star}, ..., t_{B}^{\star}$.
+
+(d) Compute the bias correction term $Z_{0}$ by $z_{0} = \Phi^{-1}\{\hat G(\hat \theta )\}$ where $\Phi (z)$ is the standard normal distribution function.
+
+(e) Compute the term $\alpha$, the rate of change of the standard deviation of the normalized parameter. For general parameter, a is computed using a jackknife procedure. Let $X_{(i)}$ be the original data with the i'th item $x_{i}$ removed, $\hat \theta_{(i)}$ be the estimate of $\theta$ based on $X_{(i)}$ , and $\hat \theta_{(.)}$ be the average of $\hat \theta_{(i)}$'s. Then $$a = \frac{\sum_{i}(\hat \theta_{(.)}- \hat \theta_{i})^3}{6\{(\hat \theta_{(.)}- \hat \theta_{i})^2\}^{3/2}}$$
+
+Given these quantities the 100(1 - $\alpha$)% $BC_{a}$ CI of $\theta$ is $$\hat G^{-1}\{\Phi(z[a])<\theta< \hat G^{-1}\{\Phi(z[1-a])\}$$ where $z[a]:=z_{0}+(z_{0}+z^{a})/\{1-a(z_{0}+z^{a})\}$ and $z^{a}:=\Phi^{-1}(a)$.
+
+For $B \to \infty$ the interval is exact if there exists a normalizing transfrom $\phi=h(\theta)$ such that $$\frac{\hat \phi - \phi}{\sigma_{\phi}} \sim N(-z_{0}, 1)  $$ where $\sigma_{\phi} = 1+a\phi$. 
+
+The BCa likelihood is defined as $$L:=L[\Phi^{-1}\{\hat G(\theta\}] $$ where the observed $\phi = \Phi^{-1}\{\hat G (\hat \theta)\}$ is used to compute the likelihood.
+
+For R, this can be implemented through bootstrap::bcanon.
+## Code
+
+```{r, comment=''}
+# Treblinka data:
+library(tidyverse)
+library(lubridate)
+library(iZID)
+library(extraDistr)
+rmdata <- read_csv("c:/Rproj/685/Treblinka.csv")%>%
+  mutate(date = as.Date(`Date`, '%b %d, %Y'),
+         month = month(date),
+         year = year(date),
+         count = `Victims of Treblinka`,
+         day = day(date),
+         weekday = weekdays(date),
+         obs = row_number())%>%
+  # select(obs, date, count)%>%
+  filter(!is.na(count))%>% #remove missing data
+  arrange(date)
+
+x<- rmdata$count # the sample data
+n<- length(x) # length of sample data
+v0<- mean(x)
+nb<- 4000 # number of bootstrap rounds
+nt <- nb / 5 # length of our "grid" 
+set.seed(7779779)
+CI_par <- c(NA, NA) # for CI of parametric bootstrap
+CI_nonpar <- c(NA, NA)
+alpha = 0.05 # confidence level
+llplot <- tibble(`lt_par` = rep(0,nt), `lt_non` = rep(0,nt), grid = rep(0,nt)) # data frame to store estimates
+vstar <- vector(mode = "double", length = nb) # to store your estimates
+vstar_df <- tibble(`non` = rep(0, nb), `par` = rep(0, nb))
+
+# bb.mle(x, 15000, 0.73, 2.75, lowerbound = 1e-8, upperbound = 1e10) 
+
+for (ipar in 1:2) { # 1 = nonparametric 2 = parametric
+  if (ipar == 1) { # nonparametric
+    xstar <- sample(x, n * nb, repl = T) # sample w/ replacement from data
+    xstar <- matrix(xstar, ncol = n) # eg. n = 187 columns, nb = 2000 rows, so each row is one bootstrap sample of data
+  } else if (ipar ==2) { # parametric
+    xstar <- rbbinom(n * nb, size =  24725, alpha = 0.7354308 , beta = 2.751748 ) # sample from parameters from MLE
+    xstar <- matrix(xstar, ncol = n)
+  }
+  for (i in 1:nb) {
+    vstar[i] <- bb.mle(xstar[i,], 15000, 0.73, 2.75, lowerbound = 1e-4, upperbound = 1e10)[1] # for each bootstrap samples, calculate MLE 
+  }
+  vstar_df[ipar] <- vstar
+
+  # Set up a grid (for bootstrap likelihoodonly )
+  grid <-  seq(min(vstar) + 1, max(vstar) - 1, length.out = nt)
+  llplot$grid  <- seq(min(vstar)+1 + max(vstar)-1, length.out = nt)
+
+    
+  # phi0 and phi
+  phi0 <- qnorm(sum((vstar < 24725.09)) / nb) # phi0 is the proportion of bootstrap MLE estimates 
+  # that is less than MLE estimates from observed data. And then apply an inverse normal function.
+  # It is called the bias correction term.
+  phi <- vector(mode = "double", length = nt) # phi is a vector, calculate the same thing that as in 
+
+  for (i in 1:nt){
+    phi[i] <- qnorm(sum(vstar < grid[i]) / nb)
+  }
+  # phi0. But at every grid point, instead of only at observed value. This is approximation of the 
+  # true distribution of "theta", i.e. whatever parameter we are interested in.
+  
+  # Next we need to compute the a, which measures the rate of change of standard deviation. If the 
+  # theta, i.e. the parameter we are interested in , is the mean, then a is calculated by skewness.
+  
+  # For general method, calculation of a is done by jackknife (on the sample data, not on bootstrap data)
+  ti <- vector(mode = "double", length = n)
+  for (i in 1:n) { # here is 1:n because we are dealing with sample data. Not nb, as in bootstrap data calculations.
+      ti[i] <- bb.mle(x[-i], 20000, 1, 1, lowerbound = 1e-5, upperbound = 1e8)[1] #x[-i] is is to omit the i-th observation
+      # MLE calculation for each bootstrap samples
+    }
+  tm <- mean(ti) # mean of those jackknife caculations
+  a = sum((tm - ti)^3)/6/sum((tm - ti)^2)^(3/2) # plug in tm and ti into a formula that is 
+  # similar to the skewness calculation
+  
+  # For bootstrap likelihood
+  # The likelihood is defined as the $L[phi^{-1}(\hat \G(\theta))]$
+  # If we use pipe operator, it is theta %>% G_hat(G_hat means distribution based on bootstrap) %>% qnorm()
+  # That is, a density function applied to a function similar to phi0, which is to apply an inverse-normal function to the proportion of bootstrap MLE estimates that is 
+  # less than MLE estimates from observed data. 
+  # But likelihood is defined on real theta, so that is to apply an inverse-normal function 
+  # to the proportion of bootstrap MLE estimates that is less than true theta(theta = parameter of interest). Note that this is based on a parameter value, so we use phi0, the MLE estimate of it, to estimate.
+  # Note that phi0 is an observed number, but it also has an distribution. It happens that distribution of
+  # (estimator that produce phi0) - (phi) / (1+a*phi) ~ N(- phi0, 1)  --(1)
+  # So this estimator is normal, and apply a density function is dnorm. When you do that to likelihood
+  # theta %>% G_hat(G_hat means distribution based on bootstrap) %>% qnorm() %>% dnorm()
+  # The last two steps are cancelled. What you get is the meaning of bootstrap likelihood.
+  #
+  # You might wonder why (1) ~ Normal
+  # i.e. why MLE from data %>% G_hat (bootstrap distribution) %>% qnorm is normally distributed
+  # That is because it happens everytime when MLE from data %>% some function and that function is a 
+  # normalizing transform. To see why it is, say MLE from data has a real distribution function G (not G_hat)
+  # By probability integral theorem, G(MLE from data) ~ unif(0,1), and qnorm() applied to it gives you a standard normal
+  # That is why we see a lot of qnorm applied a bootstrap distribution function.
+  s = 1 + a * (phi - phi0) 
+  pmean <-  -phi0 * s + phi
+  ln <- dnorm(phi0, mean = pmean, sd = s) # size nt b/c pmean and s' size is nt
+  lt <- ln / max(ln)
+
+  # Confidence Interval estimation for nonparametric
+  if (ipar == 1) {
+    # alpha = confidence coefficient
+    # z[alpha] := z0 + (z0+z_alpha) / (1-a(z0+z_alpha)) where z_alpha is qnorm(alpha)
+    # To get z[1-alpha] replace alpha with 1-alpha in the last line
+    # That is, you specify an alpha, it is transformed by some action, 
+    # and then added to bias correction term.
+    # The BCa CI is 
+    # G_hat^{-1}(dnorm(z[alpha])) < theta < G_hat^{-1}(dnorm(z[1-alpha]))
+    alpha1 <- phi0 + (phi0 + qnorm(alpha)) / (1 - a * (phi0 + qnorm(alpha))) #z[alpha]
+    alpha2 <- phi0 + (phi0 + qnorm(1 - alpha)) / (1 - a * (phi0 + qnorm(1-alpha))) #z[1-alpha]
+    CI_nonpar <- quantile(vstar, probs = c(pnorm(alpha1), pnorm(alpha2))) 
+    # quantile(vstar) is the inverse of G_hat, which is the bootstrap distribution
+    # That is, search the dorm(alpha1) quantile and dnorm(alpha2) quantile in the bootstrap distribution
+    
+    llplot$lt_non <- lt # store likelihood estimate to the non-par column
+    cat("max likelihood is for non-parametric is: ", max(ln),"\n")
+    cat("The location",which.max(llplot$lt_non) ,"with highest likelihood for non-parametric: ", grid[which.max(llplot$lt_non)], "\n")
+    cat("The CI for non-parametric is: ", CI_nonpar, "\n")
+  } else if (ipar == 2){
+    CI_par <- quantile(vstar, probs = c(alpha / 2, 1 - alpha / 2))
+    llplot$lt_par <- lt
+    
+    cat("max likelihood is for parametric is: ", max(ln),"\n")
+    cat("The location",which.max(llplot$lt_par) ,"with highest likelihood for parametric: ", grid[which.max(llplot$lt_par)], "\n")
+    cat("The CI for parametric is: ", CI_par, "\n")
+  }
+}
+
+plot(llplot$grid, llplot$lt_non, type = "l", 
+     xlab = "bootstrap n", ylab = "likelihood",
+     xlim = c(min(grid), max(grid) - 1 )) +
+  lines(llplot$grid, llplot$lt_par, type = "l", col = "red")
+
+```
+
+```{r}
+data = rnorm(100,10,1)
+M = 5000; theta.propose = w = rep(0,M)
+for (i in 1:M){
+  theta.propose[i] = runif(1,-10,30)
+  el = el.test(data, mu = theta.propose[i])
+  w[i] = exp(-0.5 * (el$'-2LLR'))
+}
+theta = sample(theta.propose, M , prob = w, replace = T)
+mean(theta); sd(theta) ;quantile(theta, probs = c(0.1,0.9))
+hist(theta, main = "", xlab = "theta")
+
+```
+

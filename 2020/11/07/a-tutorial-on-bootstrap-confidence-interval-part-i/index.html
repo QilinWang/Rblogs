@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.79.0" />
+
+
+<title>A Tutorial on Bootstrap Confidence Interval - Part I - A Hugo website</title>
+<meta property="og:title" content="A Tutorial on Bootstrap Confidence Interval - Part I - A Hugo website">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/qilin29/">Linkedin</a></li>
+    
+    <li><a href="https://twitter.com/home">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">9 min read</span>
+    
+
+    <h1 class="article-title">A Tutorial on Bootstrap Confidence Interval - Part I</h1>
+
+    
+    <span class="article-date">2020-11-07</span>
+    
+
+    <div class="article-content">
+      
+<script src="index_files/header-attrs/header-attrs.js"></script>
+<link href="index_files/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="index_files/anchor-sections/anchor-sections.js"></script>
+
+
+<p>This is a tutorial I wrote for myself while learning how to correctly implement the BCa (bias-corrected-accelerated) bootstrap confidence interval.</p>
+<div id="theory" class="section level1">
+<h1>Theory</h1>
+<p>The key to understand bootstrap is the two following relationships:</p>
+<p>Our statistics of interest, <span class="math inline">\(\hat\theta\)</span>, is calculated from real world data x according to some algorithm <span class="math inline">\(t(.)\)</span>, assuming x is sampled from some unknown distribution F:</p>
+<p><span class="math inline">\(F \xrightarrow{iid} x \xrightarrow{t} \hat\theta\)</span> </p>
+<p>In nonparametric bootstrap, our bootstrap statistics of interest, <span class="math inline">\(\hat\theta^*\)</span>, is calculated from bootstrap data <span class="math inline">\(x^*\)</span> according to some algorithm <span class="math inline">\(t(.)\)</span>, assuming x is sampled from empirical distribution <span class="math inline">\(\hat F\)</span>:</p>
+<p><span class="math inline">\(\hat F \xrightarrow{iid} x^* \xrightarrow{t} \hat\theta^*\)</span><br />
+</p>
+<p>The parametric bootstrap resamples from the parametric distribution evaluated at the MLE estimates of the parameters:</p>
+<p><span class="math inline">\(f_{\hat \mu} \xrightarrow{iid} x^* \xrightarrow{t} \hat\theta^*\)</span> where <span class="math inline">\(\hat \mu\)</span> is the MLE estimate of the parameter <span class="math inline">\(\mu\)</span>.</p>
+<p>The standard deviation of <span class="math inline">\(\hat\theta\)</span>, i.e. the standard error, is the function SD() that input F and output standard deviation. The standard error of <span class="math inline">\(\hat\theta\)</span>, on the other hand, input <span class="math inline">\(\hat F\)</span>, a plug-in estimate of the true standard error.</p>
+<p><strong>What is the 95% confidence interval of the bootstrap estimate?</strong> That is, what is the process that if we repeat many times, 95% of the time the true parameter will fall inside the produced interval?</p>
+<div id="first-method-just-use-1.96" class="section level3">
+<h3>First method: just use 1.96</h3>
+<p>To begin, we can obviously use the <span class="math inline">\(\hat\theta \pm 1.96Se_{boot}(\hat\theta)\)</span> to construct a confidence interval.
+The problem with this approach is that<br />
+- This assumes a normal distribution.
+Perhaps more fundamentally, it assumes a symmetric distribution around <span class="math inline">\(\hat\theta\)</span>. But a bootstrap distribution <em>may not be</em> a normal distribution.<br />
+- For many estimators <span class="math inline">\(\hat\theta\)</span>, the asymptotic normality guarantees that this works. However, as shown in p.186 of Efron and Hastie’s book[Efron and Hastie, 2016], it is possible that the normality will not set in even with a bootstrap sample size of 2000.</p>
+</div>
+<div id="second-method-use-percentile" class="section level3">
+<h3>Second method: use percentile</h3>
+<div id="notation" class="section level4">
+<h4>Notation</h4>
+<p><span class="math inline">\(\hat G(\theta)\)</span> is <span class="math inline">\(\# \{ \hat\theta^{*b} \leq \hat\theta \} / B\)</span>, the bootstrap cdf of <span class="math inline">\(\hat G(t)\)</span>, the proportion of bootstrap samples less than t.</p>
+<p><span class="math inline">\(\alpha\)</span>th percentile point <span class="math inline">\(\hat \theta^{*(a)}\)</span> of the bootstrap distribution is given by <span class="math inline">\(\hat G^{-1}(t)\)</span>, which is the value putting proportion <span class="math inline">\(\alpha\)</span> of the bootstrap sample to its left.</p>
+<p>The level-<span class="math inline">\(\alpha\)</span> upper endpoint of the percentile interval <span class="math inline">\(\hat \theta_{\%ile}[\alpha] = \hat\theta^{*(\alpha)} = \hat G^{-1}(\alpha)\)</span>, so 95% central percentile interval is <span class="math inline">\(( \hat \theta_{\%ile}[.025], \hat \theta_{\%ile}[.975])\)</span></p>
+</div>
+<div id="continue" class="section level4">
+<h4>Continue</h4>
+<p>The second method is the <em>percentile method</em>.
+This time, it simply checks the 0.025 and 0.975 percentile of the bootstrap distribution and proclaims that this <em>is</em> the <em>exact</em> confidence interval.<br />
+</p>
+<p>In what sense is this true?<br />
+</p>
+<p>This approach assumes that there is a monotonically increasing transformation <span class="math inline">\(m()\)</span> (for example, a log transformation) such that the estimator <span class="math inline">\(\hat\theta \sim N(\theta, \sigma^2)\)</span>.<br />
+</p>
+<p>That is, the estimator is normally distributed around the true parameter value with some constant variance.<br />
+</p>
+<p>Note that here we just assumes that such transformation exists.<br />
+If it exists, then for <span class="math inline">\(m(\hat\theta)\)</span> the confidence interval is obviously <span class="math inline">\(m(\hat\theta) \pm 1.96Se_{m(\hat\theta)}\)</span>. Because <span class="math inline">\(m()\)</span> is a monotonically increasing transformation, it preserves the ranking of percentiles. That is, the 95% quantile of <span class="math inline">\(\hat\theta\)</span> is still the 95% quantile after the transformation.
+Since we know that confidence interval is exact <em>after transformation</em>, we also know that the bootstrap confidence interval is exact <em>before transformation</em>.</p>
+<p>That is why we can simply count the 2.5% and 97.5% percentile of the bootstrap distribution when we want a 95% confidence interval. In short, we utilize the transformation invariant property of the percentile intervals.</p>
+<p>We have been talking about <em>assuming</em> a transformation exists. There is in fact a transformation that always exists (when some conditions are met): <span class="math display">\[\phi = m(\theta) = \Phi^{-1}[\hat G (\theta)] \]</span>
+where <span class="math inline">\(\hat G(\theta)\)</span> is <span class="math inline">\(\# \{ \hat\theta^{*b} \leq \hat\theta \} / B\)</span>, the proportion of observations in the bootstrap sample that is less than <span class="math inline">\(\theta\)</span>. The reasoning is something like this: we know after transformtion <span class="math inline">\(m(\theta)\)</span> is normally distributed, but <span class="math inline">\(\theta\)</span> itself has some unknown distribution <span class="math inline">\(G()\)</span> but we only get to see the bootstrap distribution of <span class="math inline">\(\hat G()\)</span>. If <span class="math inline">\(\hat \theta \sim G\)</span>, then by the <a href="https://en.wikipedia.org/wiki/Probability_integral_transform">probability integral tranform</a> (Suppose that a random variable X has a continuous distribution for which the cumulative distribution function (CDF) is <span class="math inline">\(F_x\)</span>. Then the random variable Y defined as <span class="math display">\[Y = F_x(X)\]</span> has a standard uniform distribution) <span class="math inline">\(G(\hat theta)\)</span> is standard uniform. Then, <span class="math inline">\(\Phi^{-1}[G(\hat\theta)]\)</span> has to be a standard normal (this is in fact how we generate random normal samples in the computer!). Thus, <span class="math inline">\(\Phi^{-1}[G(\cdot)]\)</span> is an exact normalizing transformation for <span class="math inline">\(\hat theta\)</span>.</p>
+</div>
+</div>
+</div>
+<div id="third-method-bca-bias-corrected-accelated-percentile" class="section level1">
+<h1>Third method: BCA (bias-corrected-accelated) percentile</h1>
+<p>It turns out that the inverse transformation will induce some bias. Denote <span class="math inline">\(m(\theta)\)</span> as <span class="math inline">\(\phi\)</span>, remember our assumption is <span class="math inline">\(\hat\phi \sim N(\phi, \sigma^2)\)</span>.<br />
+Then for the bootstrap data, <span class="math inline">\(\hat\phi^* \sim N(\hat\phi, \sigma^2)\)</span> and <span class="math inline">\(Pr_* \{\hat\phi^* \leq \hat\phi \} = 0.5\)</span> because it is a normal distribution.<br />
+</p>
+<p>Because of the monotonicity of transformation, we should assume that when we transform back from <span class="math inline">\(\phi\)</span> to <span class="math inline">\(\theta\)</span>, <span class="math inline">\(Pr_* \{\hat\theta^* \leq \hat\theta \} = 0.5\)</span>.<br />
+</p>
+<p>That is, <span class="math inline">\(\hat\theta^*\)</span> should be <em>median unbiased</em> for <span class="math inline">\(\hat\theta\)</span>. In reality, the <span class="math inline">\(\hat\theta^*\)</span> is biased upward relative to <span class="math inline">\(\hat\theta\)</span>, so there is need to adjust.<br />
+</p>
+<p>Let <span class="math inline">\(p_0 = \# \{ \hat\theta^{*b} \leq \hat\theta \} / B\)</span> be the observed <span class="math inline">\(Pr_* \{\hat\theta^* \leq \hat\theta \}\)</span>, and define bias-correction value as <span class="math inline">\(z_0 = \Phi^{-1}(p_0)\)</span>. Note that this is the normalizing transformation we talked about previously. In our example, <span class="math inline">\(p_0\)</span> should be 0.5. But assume we observe that <span class="math inline">\(p_0\)</span> is 0.478, then bias-correction value is <code>qnorm(0.478)</code>, which is -0.055. If <span class="math inline">\(p_0\)</span> is 0.5, then <code>qnorm(0.5)</code> gives zero. So the bias is measured on a “standard normal” scale.<br />
+</p>
+<p>When the bias correction value is included, we define the <span class="math inline">\(m()\)</span> transformation to be <span class="math inline">\(\hat\phi \sim N(\phi - z_0\sigma, \sigma^2)\)</span>. It can be shown that the BC level-alpha confidence interval endpoint is defined to be <span class="math inline">\(\hat\theta_{BC}[a] = \hat G^{-1}([\Phi(2z_0 + z^{(\alpha)}])\)</span>.<br />
+</p>
+<p>Note that when <span class="math inline">\(p_0 = 0.5\)</span>, the median unbias situation, <span class="math inline">\(z_0 = 0\)</span> and <span class="math inline">\(\hat\theta_{BC}[a] = \hat G^{-1}[\Phi( z^{(\alpha)})] = \hat G^{-1}(\alpha)\)</span>, which is equal to the <em>percentile method</em> we just mentioned.<br />
+</p>
+<p>A more elaborate transformation is <span class="math inline">\(\hat\phi \sim N(\phi - z_0\sigma_\phi, \sigma_\phi^2)\)</span> where <span class="math inline">\(\sigma_\phi = 1 + a\phi\)</span>. <code>a</code> is called <em>acceleration</em>, which indicates how the standard deviation <span class="math inline">\(\hat\phi\)</span> varies with the actual value <span class="math inline">\(\phi\)</span>. That is, it is a measure of <span class="math inline">\(d\sigma_{\phi} / d\phi\)</span>. In one-parameter exponential family, this is one third of <span class="math inline">\(d\sigma_{\theta} / d\theta\)</span>; that is, the transformation to normality also decreases the instability of the standard deviation. It turns out that for one-parameter exponential family, this is one sixth the skewness of the score function.</p>
+<p>When <code>a</code> is zero, <span class="math inline">\(\sigma_{\phi}\)</span> is equal to one, a constant. When it is positive, it means that as <span class="math inline">\(\phi\)</span> gets larger</p>
+<p>In this case, the confidence interval is <span class="math inline">\(\hat\theta_{BC}[a] = \hat G^{-1}[\Phi(z_0 + \frac{z_0 + z^{(\alpha)}}{1 - a(z_0 + z^{(\alpha)})} ]\)</span>.
+When a = 0, the BCa method reduces to the BC method.
+If there is no bias, we have seen that it reduces to percentile method.
+When the estimator is normally distributed, it further reduces to <span class="math inline">\(\hat\theta \pm 1.96Se\)</span>.</p>
+<p>How is a computed?
+- For one-parameter exponential families such as the Poisson, a equals <span class="math inline">\(z_o\)</span>.
+- For one-sample nonparametric problems, a can be estimated by the jackknife resamples <span class="math inline">\(\hat a = \frac{1}{6} \frac{\sum^n_{i=1}(\hat\theta_{(i)} - \hat\theta_{(.)})^3}{[\sum^n_{i=1}(\hat\theta_{(i)} - \hat\theta_{(.)})^2]^{1.5}}\)</span>.</p>
+<p>Another warning from the book is to distrust this method for high dimension situation.
+MLE estimates cannot be trusted.
+To make sure, we can compute <span class="math inline">\(z_0\)</span> and a and make sure their absolute value is less than 0.2.</p>
+</div>
+<div id="code-implementation" class="section level1">
+<h1>Code Implementation</h1>
+<p>Recall the following relationship:</p>
+<p>Real world data: <span class="math inline">\(F \xrightarrow{iid} x \xrightarrow{s} \hat\theta\)</span></p>
+<p>Nonparametric bootstrap: <span class="math inline">\(\hat F \xrightarrow{iid} x^* \xrightarrow{s} \hat\theta^*\)</span></p>
+<p>Parametric bootstrap: <span class="math inline">\(f_{\hat \mu} \xrightarrow{iid} x^* \xrightarrow{t} \hat\theta^*\)</span></p>
+<pre class="r"><code>library(tidyverse)
+d &lt;- carData::Freedman 
+d &lt;- 
+  d %&gt;% rownames_to_column(var = &quot;state&quot;) %&gt;% 
+  as_tibble() %&gt;% 
+  na.omit()
+d &lt;- 
+  d %&gt;% 
+  mutate(
+    crimePerPop = crime / population)</code></pre>
+<p>Let<br />
+<span class="math inline">\(x:=(x_{1},...,x_{n})\)</span> be a random sample from a continuous distribution F.</p>
+<pre class="r"><code>x &lt;- d$crimePerPop # the sample data</code></pre>
+<p>We will do 4000 rounds of bootstrapping.</p>
+<pre class="r"><code>n &lt;- length(x) # length of sample data
+nb &lt;- 4000 # number of bootstrap rounds
+
+# level-alpha upper endpoint of 
+# perncentile interval
+alpha = 0.025 </code></pre>
+<p>I will present both the nonparametric and parametric bootstrap methods.
+Let <span class="math inline">\(\theta:=t(F)\)</span> be a real-valued parameter of interest, <span class="math inline">\(\hat\theta= t(x)\)</span> (based on data) and <span class="math inline">\(\hat F\)</span> be the estimates of <span class="math inline">\(\theta\)</span> and F.</p>
+<p>The statistics of interest is MAD: <span class="math inline">\(MAD = median(|X_i - median(X)|)\)</span>,which is a robust measure of the variability of a univariate sample of quantitative data.</p>
+<pre class="r"><code># nonparametric statistics
+(t_hat &lt;- median( abs( x - median(x) ) ))</code></pre>
+<pre><code>[1] 1.498111</code></pre>
+<p>then<br />
+</p>
+<ol style="list-style-type: lower-alpha">
+<li><p>generate bootstrap data <span class="math inline">\(x^{\star}\)</span> by resampling <span class="math inline">\({\hat F}\)</span>.</p></li>
+<li><p>compute <span class="math inline">\(t(x^{\star})\)</span> and call it <span class="math inline">\(t^{\star}\)</span>.</p></li>
+<li><p>Repeat (a) and (b) B times.</p></li>
+</ol>
+<pre class="r"><code># sample w/ replacement from data. 
+
+boot_data &lt;- 
+  rerun(nb, 
+        sample(x, n, replace = T)) 
+
+# rerun() is similar to replicate(),
+# returning 4000 bootstrap data in lists.</code></pre>
+<pre class="r"><code># Calculate MAD for each bootstrap
+# sample 
+
+t_hat_star = 
+  map_dbl(boot_data, function(x) 
+    median( abs( x - median(x) ) ) )</code></pre>
+<p>Denote <span class="math inline">\(\hat G(t)\)</span> the bootstrap cdf, the proportion of bootstrap samples less than t, i.e. <span class="math inline">\(\hat G(t) = \#\{\hat\theta^{*b} \leq t \} / B\)</span>.</p>
+<ol start="4" style="list-style-type: lower-alpha">
+<li>Compute the bias correction term <span class="math inline">\(Z_{0}\)</span> by <span class="math inline">\(z_{0} = \Phi^{-1}\{\hat p_0\}\)</span> where <span class="math inline">\(\Phi (z)\)</span> is the standard normal distribution function. Here <span class="math inline">\(p_0 = \hat G(\hat \theta )\)</span>, the cdf of bootstrap distribution, is calculated <span class="math inline">\(p_0 = \# \{ \hat\theta^{*b} \leq \hat\theta \} / B\)</span>. In other words, <span class="math inline">\(p_0\)</span> is the proportion of bootstrap statistics that is less than MLE estimates of statistics from actual data.</li>
+</ol>
+<pre class="r"><code># z0 is the bias correction term.
+z0 &lt;- qnorm( 
+  sum( ( t_hat_star &lt; t_hat ) / nb ))</code></pre>
+<ol start="5" style="list-style-type: lower-alpha">
+<li>Compute the acceleration a, the rate of change of the standard deviation. For general parameter, a is computed using a jackknife procedure. Let <span class="math inline">\(X_{(i)}\)</span> be the original data with the i’th item <span class="math inline">\(x_{i}\)</span> removed, <span class="math inline">\(\hat \theta_{(i)}\)</span> be the estimate of <span class="math inline">\(\theta\)</span> based on <span class="math inline">\(X_{(i)}\)</span> , and <span class="math inline">\(\hat \theta_{(.)}\)</span> be the average of <span class="math inline">\(\hat \theta_{(i)}\)</span>’s. Then <span class="math display">\[a = \frac{\sum_{i}( \hat \theta_{i} - \hat \theta_{(.)})^3}{6\{\sum (\hat \theta_{(.)} - \hat\theta_{i})^2 \}^{3/2}}\]</span></li>
+</ol>
+<p>Calculation of a is done by jackknife (on the sample data, not on bootstrap data).</p>
+<pre class="r"><code>t_jackknife &lt;- vector(mode = &quot;double&quot;, length = n)
+
+# x[-i] is to omit the i-th observation
+for (i in 1:n) { # this is 1:n, not nb
+t_jackknife[i] &lt;- 
+  median( abs( x[-i] - median(x[-i]) ) )
+}
+
+# Get mean of jackknife calculations
+tm &lt;- mean(t_jackknife) 
+
+a = 
+  (sum( (t_jackknife - tm)^3 )/6) / 
+  (sum( (t_jackknife - tm)^2 )^1.5) 
+a</code></pre>
+<pre><code>[1] -0.003103148</code></pre>
+<p>The 100(1 - <span class="math inline">\(\alpha\)</span>)% <span class="math inline">\(BC_{a}\)</span> confidence interval of <span class="math inline">\(\theta\)</span> is<br />
+</p>
+<p><span class="math display">\[\hat G^{-1}\{\Phi(z[\alpha])&lt;\theta&lt; \hat G^{-1}\{\Phi(z[1-\alpha])\}\]</span> where <span class="math inline">\(z[\alpha]:=z_{0}+(z_{0}+z^{(\alpha)})/\{1-a(z_{0}+z^{(\alpha)})\}\)</span> and <span class="math inline">\(z^{\alpha}:=\Phi^{-1}(\alpha)\)</span>.</p>
+<p>To clarify,<br />
+</p>
+<ul>
+<li><p><span class="math inline">\(z^{(\alpha)}\)</span> = the <span class="math inline">\(\alpha th\)</span> percentile of a standard normal distribution. If <span class="math inline">\(\alpha\)</span> is 0.025, <span class="math inline">\(1-\alpha\)</span> is 0.975, then <span class="math inline">\(z^{(\alpha)}\)</span> is <code>qnorm(0.025)</code>, and <span class="math inline">\(z^{(1-\alpha)}\)</span> is <code>qnorm(0.975)</code>, and the confidence interval is 95%.</p></li>
+<li><p><span class="math inline">\(z_0\)</span> is the bias-correction term calculated from the bootstrap distribution.</p></li>
+</ul>
+<pre class="r"><code>#z[alpha]
+alpha1 &lt;- 
+  z0 + (z0 + qnorm(alpha)) / 
+  (1 - a * (z0 + qnorm(alpha))) 
+
+#z[1-alpha]
+alpha2 &lt;- 
+  z0 + (z0 + qnorm(1 - alpha)) / 
+  (1 - a * (z0 + qnorm(1 - alpha))) 
+  
+# The two ends of BCa CI formula is  
+# Inv_G_hat(pnorm(z[alpha]))  
+# Inv_G_hat(pnorm(z[1-alpha]))
+
+# G_hat is the cdf of bootstrap 
+# distribution. So quantile(t_hat_star)
+# is the inverse of G_hat.
+
+CI_nonpar &lt;- 
+  quantile(t_hat_star, 
+           probs = c(pnorm(alpha1),
+                     pnorm(alpha2))) 
+
+
+CI_nonpar</code></pre>
+<pre><code> 1.00176% 94.50524% 
+ 1.120272  1.898311 </code></pre>
+</div>
+<div id="reference" class="section level1">
+<h1>Reference</h1>
+<p><em>Computer Age Statistical Inference</em>, Bradley Efron and Trevor Hastie, 2016.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

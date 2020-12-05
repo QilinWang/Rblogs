@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Exercise on A Hugo website</title>
+    <link>/tags/exercise/</link>
+    <description>Recent content in Exercise on A Hugo website</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 28 Oct 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/exercise/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Data Analysis with R: A Take Home Test from a Gaming Startup</title>
+      <link>/2020/10/28/data-analysis-with-r-take-home-test/</link>
+      <pubDate>Wed, 28 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/10/28/data-analysis-with-r-take-home-test/</guid>
+      <description>I recently finished a take home test from a local start-up. It is my first encounter with such tests, so I think it would be interesting to share my work.
+Before we dive in, I would like to say that I probably have made things way more complicated than they need to be. The real
+library(plotly)library(tidyverse)library(RColorBrewer)library(rethinking)library(dagitty)library(ggforce)library(car)library(effects)library(wesanderson)Q1: General VisualisationStep 1: data cleaningThe original data is in a messy form.</description>
+    </item>
+    
+    <item>
+      <title>The Business Model of a Loyalty Program for Mobile Gamers</title>
+      <link>/2020/10/28/the-business-model-of-a-loyalty-program-for-mobile-gamers/</link>
+      <pubDate>Wed, 28 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/10/28/the-business-model-of-a-loyalty-program-for-mobile-gamers/</guid>
+      <description>I would like to share some thoughts on the business model of a local start-up. The basic idea is this: the company will give out cash rewards in exchange for users spending time on this app and playing games in an uninterrupted manner. Because it actually pays, the ratings of the company is quite good on the Google Play Store.
+Is this a great business model? I had thought about it carefully.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Statistics on A Hugo website</title>
+    <link>/tags/statistics/</link>
+    <description>Recent content in Statistics on A Hugo website</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 13 Nov 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/statistics/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Tutorial on Bootstrap Confidence Interval - Part II</title>
+      <link>/2020/11/13/a-tutorial-on-bootstrap-confidence-interval-part-ii/</link>
+      <pubDate>Fri, 13 Nov 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/11/13/a-tutorial-on-bootstrap-confidence-interval-part-ii/</guid>
+      <description>As mentioned in my previous post, we should continue with a parametric bootstrap simulation. In addition, in part II of this tutorial, I would like to demonstrate how to construct a “bootstrap likelihood” as an alternative to empirical likelihood.
+Recall the parametric bootstrap resamples from the parametric distribution evaluated at the MLE estimates of the parameters:
+\[f_{\hat \mu} \xrightarrow{iid} x^* \xrightarrow{t} \hat\theta^*\] where \(\hat \mu\) is the MLE estimate of the parameter \(\mu\).</description>
+    </item>
+    
+    <item>
+      <title>A Tutorial on Bootstrap Confidence Interval - Part I</title>
+      <link>/2020/11/07/a-tutorial-on-bootstrap-confidence-interval-part-i/</link>
+      <pubDate>Sat, 07 Nov 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/11/07/a-tutorial-on-bootstrap-confidence-interval-part-i/</guid>
+      <description>This is a tutorial I wrote for myself while learning how to correctly implement the BCa (bias-corrected-accelerated) bootstrap confidence interval.
+TheoryThe key to understand bootstrap is the two following relationships:
+Our statistics of interest, \(\hat\theta\), is calculated from real world data x according to some algorithm \(t(.)\), assuming x is sampled from some unknown distribution F:
+\(F \xrightarrow{iid} x \xrightarrow{t} \hat\theta\) In nonparametric bootstrap, our bootstrap statistics of interest, \(\hat\theta^*\), is calculated from bootstrap data \(x^*\) according to some algorithm \(t(.</description>
+    </item>
+    
+  </channel>
+</rss>

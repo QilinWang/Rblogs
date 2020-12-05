@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.79.0" />
+
+
+<title>A Tutorial on Bootstrap Confidence Interval - Part II - A Hugo website</title>
+<meta property="og:title" content="A Tutorial on Bootstrap Confidence Interval - Part II - A Hugo website">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/qilin29/">Linkedin</a></li>
+    
+    <li><a href="https://twitter.com/home">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">7 min read</span>
+    
+
+    <h1 class="article-title">A Tutorial on Bootstrap Confidence Interval - Part II</h1>
+
+    
+    <span class="article-date">2020-11-13</span>
+    
+
+    <div class="article-content">
+      
+<script src="index_files/header-attrs/header-attrs.js"></script>
+<link href="index_files/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="index_files/anchor-sections/anchor-sections.js"></script>
+
+
+<p>As mentioned in <a href="https://qilin.dev/2020/11/07/a-tutorial-on-bootstrap-confidence-interval-part-i/">my previous post</a>, we should continue with a parametric bootstrap simulation. In addition, in part II of this tutorial, I would like to demonstrate how to construct a “bootstrap likelihood” as an alternative to empirical likelihood.</p>
+<p>Recall the parametric bootstrap resamples from the parametric distribution evaluated at the MLE estimates of the parameters:</p>
+<p><span class="math display">\[f_{\hat \mu} \xrightarrow{iid} x^* \xrightarrow{t} \hat\theta^*\]</span> where <span class="math inline">\(\hat \mu\)</span> is the MLE estimate of the parameter <span class="math inline">\(\mu\)</span>.</p>
+<pre class="r"><code>library(tidyverse)
+d &lt;- carData::Freedman 
+d &lt;- 
+  d %&gt;% rownames_to_column(var = &quot;state&quot;) %&gt;% 
+  as_tibble() %&gt;% 
+  na.omit()
+d &lt;- 
+  d %&gt;% 
+  mutate(
+    crimePerPop = crime / population)</code></pre>
+<pre class="r"><code>x &lt;- d$crimePerPop # the sample data</code></pre>
+<pre class="r"><code>n &lt;- length(x) # length of sample data
+nb &lt;- 4000 # number of bootstrap rounds
+
+# level-alpha upper endpoint of 
+# perncentile interval
+alpha = 0.025 </code></pre>
+<p>The x is distributed like this:</p>
+<pre class="r"><code>ggplot(d, aes(x = crimePerPop)) + 
+  geom_density() </code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>It does not look like a normal distribution, but let us fit it with normal distribution anyway.</p>
+<p>Important: in parametric bootstrap, you calculate the MLE, and then generate bootstrap samples <em>according to that estimate</em>. It is a common mistake to confuse this approach with the nonparametric approach.</p>
+<pre class="r"><code>library(fitdistrplus)
+# MLE estimate 
+( f &lt;- 
+    fitdist(x, &quot;norm&quot;, 
+            method = &quot;mle&quot;, 
+            control = list(maxit = 5000)) )</code></pre>
+<pre><code>Fitting of the distribution &#39; norm &#39; by maximum likelihood 
+Parameters:
+     estimate Std. Error
+mean 4.064226  0.2345322
+sd   2.345322  0.1658392</code></pre>
+<pre class="r"><code>boot_data &lt;- 
+  rnorm(nb, mean = f$estimate[1], 
+        sd = f$estimate[2])</code></pre>
+<p>This time, the statistics of interest are mean and variance, as opposed to a single statistics.</p>
+<pre class="r"><code># mean() and sd() on multiple bootstrap samples
+mean_star = 
+  map_dbl(boot_data, mean)
+sd_star = 
+  map_dbl(boot_data, sd)</code></pre>
+<div id="bootstrap-likelihood" class="section level2">
+<h2>Bootstrap likelihood</h2>
+<p>As opposed to estimating MAD in the last post, this time we have two parameters, and it complicates everything. If we are only interest in the mean, then variance is a <em>nuisance</em> parameter. Yes, we can still get the confidence intervals. However, what if we like to do more, for example to get the likelihood distribution of the mean despite having four or five other nuisance parameters?</p>
+<p>The analytical way to handle it is to use <em>profile loglikelihood</em>. In a two parameter distribution such as normal distribution, this means treating one parameter as fixed, obtain the solution of the other parameter, and then vary the “fixed” parameter to find out the combination that produce the maximum likelihood.</p>
+<p>The problem is that analytical solution is difficult to get for complex problems. One solution to this is the <em>empirical</em> or <em>nonparametric</em> likelihood. It can <em>treat the whole shape of distribution as nuisance</em> and still get a sensible likelihood of the mean. It turns out that BCa is a great way to construct such likelihood.</p>
+<p>Recall that when <span class="math inline">\(B \to \infty\)</span> the interval is exact if there exists a normalizing transform <span class="math inline">\(\phi=m(\theta)\)</span> such that <span class="math display">\[\frac{\hat \phi - \phi}{\sigma_{\phi}} \sim N(-z_{0}, 1)  \]</span> where <span class="math inline">\(\sigma_{\phi} = 1+a\phi\)</span></p>
+<p>Recall also that for a standard normal distribution <span class="math display">\[log L(\theta) = - \frac{n}{2s^2}(\bar x - \theta)^2\]</span>. Because <span class="math inline">\(\hat\phi\)</span> is normal, we know the likelihood is something like this: <span class="math display">\[-log\sigma_{\phi} - \frac{(\hat\phi - \phi + z_0\sigma_{phi})}{2\sigma^2_{\phi}}\]</span></p>
+<p>The BCa likelihood is defined as <span class="math display">\[L_B(\theta):=L[\Phi^{-1}\{\hat G(\theta\)}] \]</span> Recall <span class="math inline">\(z_0 = \Phi^{-1}\{\hat G (\hat \theta)\}\)</span> is the bias correction term we encountered previously. <span class="math inline">\(L(\phi)\)</span> will be calculated by plugging in <span class="math inline">\(z_0\)</span>. Notice that in the definition the <span class="math inline">\(\theta\)</span> has no hat. This is simply saying that we will set up a grid of <span class="math inline">\(\theta\)</span>’s and evaluate the likelihood at different possible <span class="math inline">\(\theta\)</span> values. This is indeed what we want: calculating likelihood at all values of <span class="math inline">\(\theta\)</span> (despite other nuisance parameters).</p>
+<p>Notice the definition simply says: give me any (a grid of) <span class="math inline">\(\theta\)</span>, I will do a transformation <span class="math inline">\(\phi^{-1}[\hat G(\theta)]\)</span> and evaluate the likelihood like a normal distribution with everything known (observed value is <span class="math inline">\(\hat theta\)</span>, variance is <span class="math inline">\(\sigma_{\phi}\)</span>, <span class="math inline">\(\theta\)</span> is what we supply). The reason that we can regard the transformation as a exact normalizing transformation has been explained in the previous post. I’ll copy it there:</p>
+<blockquote>
+<p>We have been talking about <em>assuming</em> a transformation exists. There is in fact a transformation that always exists (when some conditions are met): <span class="math display">\[\phi = m(\theta) = \Phi^{-1}[\hat G (\theta)] \]</span>
+where <span class="math inline">\(\hat G(\theta)\)</span> is <span class="math inline">\(\# \{ \hat\theta^{*b} \leq \hat\theta \} / B\)</span>, the proportion of observations in the bootstrap sample that is less than <span class="math inline">\(\theta\)</span>. The reasoning is something like this: we know after transformtion <span class="math inline">\(m(\theta)\)</span> is normally distributed, but <span class="math inline">\(\theta\)</span> itself has some unknown distribution <span class="math inline">\(G()\)</span> but we only get to see the bootstrap distribution of <span class="math inline">\(\hat G()\)</span>. If <span class="math inline">\(\hat \theta \sim G\)</span>, then by the <a href="https://en.wikipedia.org/wiki/Probability_integral_transform">probability integral tranform</a> (Suppose that a random variable X has a continuous distribution for which the cumulative distribution function (CDF) is <span class="math inline">\(F_x\)</span>. Then the random variable Y defined as <span class="math display">\[Y = F_x(X)\]</span> has a standard uniform distribution) <span class="math inline">\(G(\hat theta)\)</span> is standard uniform. Then, <span class="math inline">\(\Phi^{-1}[G(\hat\theta)]\)</span> has to be a standard normal (this is in fact how we generate random normal samples in the computer!). Thus, <span class="math inline">\(\Phi^{-1}[G(\cdot)]\)</span> is an exact normalizing transformation for <span class="math inline">\(\hat theta\)</span>.</p>
+</blockquote>
+<p>Set up a grid (for bootstrap likelihood only )</p>
+<pre class="r"><code># grid &lt;-  seq(min(vstar) + 1, max(vstar) - 1, length.out = nt)
+# llplot$grid  &lt;- seq(min(vstar)+1 + max(vstar)-1, length.out = nt)</code></pre>
+<p>For bootstrap likelihood</p>
+<p>he likelihood is defined as the <span class="math inline">\(L[\phi^{-1}(\hat G(\theta))]\)</span></p>
+<p>If we use pipe operator, it is theta %&gt;% G_hat(G_hat means distribution based on bootstrap) %&gt;% qnorm()</p>
+<p>That is, a density function applied to a function similar to <span class="math inline">\(p_0\)</span>, which is to apply an inverse-normal function to the proportion of bootstrap MLE estimates that is less than MLE estimates from observed data.</p>
+<p>But likelihood is defined on real theta, so that is to apply an inverse-normal function</p>
+<p>to the proportion of bootstrap MLE estimates that is less than true theta(theta = parameter of interest). Note that this is based on a parameter value, so we use phi0, the MLE estimate of it, to estimate.</p>
+<p>Note that phi0 is an observed number, but it also has an distribution. It happens that distribution of</p>
+<p>(estimator that produce phi0) - (phi) / (1+a*phi) ~ N(- phi0, 1) –(1)</p>
+<p>So this estimator is normal, and apply a density function is dnorm. When you do that to likelihood</p>
+<p>theta %&gt;% G_hat(G_hat means distribution based on bootstrap) %&gt;% qnorm() %&gt;% dnorm()</p>
+<p>The last two steps are cancelled. What you get is the meaning of bootstrap likelihood.</p>
+<p>You might wonder why (1) ~ Normal</p>
+<p>i.e. why MLE from data %&gt;% G_hat (bootstrap distribution) %&gt;% qnorm is normally distributed</p>
+<p>That is because it happens everytime when MLE from data %&gt;% some function and that function is a normalizing transform. To see why it is, say MLE from data has a real distribution function G (not G_hat)</p>
+<p>By probability integral theorem, G(MLE from data) ~ unif(0,1), and qnorm() applied to it gives you a standard normal</p>
+<p>That is why we see a lot of qnorm applied a bootstrap distribution function.</p>
+<pre class="r"><code># set.seed(7779779)
+# nt &lt;- nb / 5
+# llplot &lt;- tibble( ll = rep(0, nt), grid = rep(0,nt) ) # data frame to store estimates
+# 
+# vstar_df &lt;- tibble(`non` = rep(0, nb), `par` = rep(0, nb))</code></pre>
+<pre class="r"><code># s = 1 + a * (phi - phi0) 
+# pmean &lt;-  -phi0 * s + phi
+# ln &lt;- dnorm(phi0, mean = pmean, sd = s) # size nt b/c pmean and s&#39; size is nt
+# lt &lt;- ln / max(ln)
+# 
+# llplot$lt_non &lt;- lt # store likelihood estimate to the non-par column
+
+# cat(&quot;max likelihood is for non-parametric is: &quot;, max(ln),&quot;\n&quot;)
+# 
+# cat(&quot;The location&quot;,
+#     which.max(llplot$lt_non) ,
+#     &quot;with highest likelihood for non-parametric: &quot;,
+#     grid[which.max(llplot$lt_non)], &quot;\n&quot;)
+# 
+# cat(&quot;The CI for non-parametric is: &quot;, 
+#     CI_nonpar, &quot;\n&quot;)
+#     llplot$lt_par &lt;- lt
+#     
+# cat(&quot;max likelihood is for parametric is: &quot;, 
+#     max(ln),&quot;\n&quot;)
+# cat(&quot;The location&quot;,
+#     which.max(llplot$lt_par),
+#     &quot;with highest likelihood for parametric: &quot;,
+#     grid[which.max(llplot$lt_par)], &quot;\n&quot;)
+# 
+# plot(llplot$grid, llplot$lt_non, type = &quot;l&quot;, 
+#      xlab = &quot;bootstrap n&quot;, ylab = &quot;likelihood&quot;,
+#      xlim = c(min(grid), max(grid) - 1 )) +
+#   lines(llplot$grid, llplot$lt_par, type = &quot;l&quot;, col = &quot;red&quot;)</code></pre>
+<pre class="r"><code># data = rnorm(100,10,1)
+# M = 5000; theta.propose = w = rep(0,M)
+# for (i in 1:M){
+#   theta.propose[i] = runif(1,-10,30)
+#   el = el.test(data, mu = theta.propose[i])
+#   w[i] = exp(-0.5 * (el$&#39;-2LLR&#39;))
+# }
+# theta = sample(theta.propose, M , prob = w, replace = T)
+# mean(theta); sd(theta) ;quantile(theta, probs = c(0.1,0.9))
+# hist(theta, main = &quot;&quot;, xlab = &quot;theta&quot;)</code></pre>
+<pre class="r"><code># x_star &lt;- matrix(x_star, ncol = nb) 
+# 
+#   for (i in 1:nt){
+#     phi[i] &lt;- qnorm(sum(vstar &lt; grid[i]) / nb)
+#   }
+
+  # phi0. But at every grid point, instead of only at observed value. This is approximation of the 
+  # true distribution of &quot;theta&quot;, i.e. whatever parameter we are interested in.
+  
+  # Next we need to compute the a, which measures the rate of change of standard deviation. If the 
+  # theta, i.e. the parameter we are interested in , is the mean, then a is calculated by skewness.</code></pre>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

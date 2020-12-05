@@ -1,0 +1,16 @@
+{
+    "id":"unique_string-1219205",
+    "type":"book",
+    "title":"Book Title",
+    "author": [
+        {
+                "family": "Efron",
+                "given": "Bradley",
+        },
+        {
+                "family": "Hastie",
+                "given": "Trevor",
+        }
+   ],
+   "issued": "2016"
+}

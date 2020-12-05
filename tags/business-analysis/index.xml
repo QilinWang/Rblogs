@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Business Analysis on A Hugo website</title>
+    <link>/tags/business-analysis/</link>
+    <description>Recent content in Business Analysis on A Hugo website</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 28 Oct 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/business-analysis/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>The Business Model of a Loyalty Program for Mobile Gamers</title>
+      <link>/2020/10/28/the-business-model-of-a-loyalty-program-for-mobile-gamers/</link>
+      <pubDate>Wed, 28 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/10/28/the-business-model-of-a-loyalty-program-for-mobile-gamers/</guid>
+      <description>I would like to share some thoughts on the business model of a local start-up. The basic idea is this: the company will give out cash rewards in exchange for users spending time on this app and playing games in an uninterrupted manner. Because it actually pays, the ratings of the company is quite good on the Google Play Store.
+Is this a great business model? I had thought about it carefully.</description>
+    </item>
+    
+  </channel>
+</rss>
