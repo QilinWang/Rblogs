@@ -6,7 +6,17 @@
     <description>Recent content in Posts on A Hugo website</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 13 Nov 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 27 Nov 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Dive into the Kruskal-Wallis Test and its R Code</title>
+      <link>/2020/11/27/a-dive-into-the-kruskal-wallis-test-and-its-r-code/</link>
+      <pubDate>Fri, 27 Nov 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/11/27/a-dive-into-the-kruskal-wallis-test-and-its-r-code/</guid>
+      <description>Introduction Let the data consist of \(N = \sum_{j=1}^{k}n_{j}\) observations from the jth treatmentm j = 1,2,…k. Then the Kruskal-Wallis test is a test which measures if the medians of j population are the same. The null hypothesis is that there is no difference among the locations, and therefore the different samples can be treated as a single combined sample.
+To compute the Kruksal-Wallis statistic H, first combine N observation from the k samples and order them from least to greatest.</description>
+    </item>
+    
     <item>
       <title>A Tutorial on Bootstrap Confidence Interval - Part II</title>
       <link>/2020/11/13/a-tutorial-on-bootstrap-confidence-interval-part-ii/</link>
