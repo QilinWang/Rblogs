@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.79.0" />
+
+
+<title>Study Notes - Using Pagerank to Analyze NBA Games - A Hugo website</title>
+<meta property="og:title" content="Study Notes - Using Pagerank to Analyze NBA Games - A Hugo website">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/qilin29/">Linkedin</a></li>
+    
+    <li><a href="https://twitter.com/home">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">8 min read</span>
+    
+
+    <h1 class="article-title">Study Notes - Using Pagerank to Analyze NBA Games</h1>
+
+    
+    <span class="article-date">2020-12-09</span>
+    
+
+    <div class="article-content">
+      
+<script src="/2020/12/09/using-pagerank-to-analyze-nba-games/index_files/header-attrs/header-attrs.js"></script>
+<link href="/2020/12/09/using-pagerank-to-analyze-nba-games/index_files/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="/2020/12/09/using-pagerank-to-analyze-nba-games/index_files/anchor-sections/anchor-sections.js"></script>
+
+
+<pre class="r"><code>library(tidyverse)
+library(lubridate)
+library(here)
+library(igraph)</code></pre>
+<div id="definitions" class="section level3">
+<h3>Definitions</h3>
+<p>What is network theory? According to <a href="https://en.wikipedia.org/wiki/Network_theory">wikipedia</a>,</p>
+<blockquote>
+<p>Network theory is the study of graphs as a representation of either symmetric relations or asymmetric relations between discrete objects.</p>
+</blockquote>
+<p>What does PageRank do? It is a measure of “eigenvector centrality”.</p>
+<blockquote>
+<p>In graph theory, eigenvector centrality (also called eigencentrality or prestige score) is a measure of the influence of a node in a network. … A high eigenvector score means that a node is connected to many nodes who themselves have high scores.</p>
+</blockquote>
+<p><a href="https://en.wikipedia.org/wiki/Eigenvector_centrality">The wiki page</a> of eigenvector centrality has some interesting applications:</p>
+<blockquote>
+<p>In a study using data from the Philippines, the authors showed how political candidates’ families had disproportionately high eigenvector centrality in local intermarriage networks.</p>
+</blockquote>
+<p><a href="https://en.wikipedia.org/wiki/PageRank">The wiki page</a> has a great of PageRank explanation of what PageRank is:</p>
+<blockquote>
+<p>PageRank works by counting the number and quality of links to a page to determine a rough estimate of how important the website is. The underlying assumption is that more important websites are likely to receive more links from other websites.</p>
+</blockquote>
+<p>There is also a beautiful photo:
+<img src="/img/PageRanks-Example.jpg" />
+And a very lucid explanation:</p>
+<blockquote>
+<p>Mathematical PageRanks for a simple network are expressed as percentages. (Google uses a logarithmic scale.) Page C has a higher PageRank than Page E, even though there are fewer links to C; the one link to C comes from an important page and hence is of high value. If web surfers who start on a random page have an 85% likelihood of choosing a random link from the page they are currently visiting, and a 15% likelihood of jumping to a page chosen at random from the entire web, they will reach Page E 8.1% of the time. (The 15% likelihood of jumping to an arbitrary page corresponds to a damping factor of 85%.) Without damping, all web surfers would eventually end up on Pages A, B, or C, and all other pages would have PageRank zero. In the presence of damping, Page A effectively links to all pages in the web, even though it has no outgoing links of its own.</p>
+</blockquote>
+</div>
+<div id="data-analysis" class="section level1">
+<h1>Data Analysis</h1>
+<p>Let us use 2018’s regular season.</p>
+<pre class="r"><code>games_2018 &lt;- games %&gt;% 
+  filter(SEASON == 2018 &amp; 
+      GAME_DATE_EST &lt; as.Date(&quot;2019-04-12&quot;))</code></pre>
+<div id="a-glance-at-the-data" class="section level3">
+<h3>A glance at the data</h3>
+<p>The data set of games:</p>
+<pre class="r"><code>games_2018</code></pre>
+<pre><code># A tibble: 1,296 x 21
+   GAME_DATE_EST GAME_ID GAME_STATUS_TEXT HOME_TEAM_ID VISITOR_TEAM_ID SEASON
+   &lt;date&gt;          &lt;dbl&gt; &lt;chr&gt;                   &lt;dbl&gt;           &lt;dbl&gt;  &lt;dbl&gt;
+ 1 2019-04-10     2.18e7 Final              1610612737      1610612754   2018
+ 2 2019-04-10     2.18e7 Final              1610612751      1610612748   2018
+ 3 2019-04-10     2.18e7 Final              1610612766      1610612753   2018
+ 4 2019-04-10     2.18e7 Final              1610612752      1610612765   2018
+ 5 2019-04-10     2.18e7 Final              1610612755      1610612741   2018
+ 6 2019-04-10     2.18e7 Final              1610612763      1610612744   2018
+ 7 2019-04-10     2.18e7 Final              1610612749      1610612760   2018
+ 8 2019-04-10     2.18e7 Final              1610612759      1610612742   2018
+ 9 2019-04-10     2.18e7 Final              1610612743      1610612750   2018
+10 2019-04-10     2.18e7 Final              1610612746      1610612762   2018
+# … with 1,286 more rows, and 15 more variables: TEAM_ID_home &lt;dbl&gt;,
+#   PTS_home &lt;dbl&gt;, FG_PCT_home &lt;dbl&gt;, FT_PCT_home &lt;dbl&gt;, FG3_PCT_home &lt;dbl&gt;,
+#   AST_home &lt;dbl&gt;, REB_home &lt;dbl&gt;, TEAM_ID_away &lt;dbl&gt;, PTS_away &lt;dbl&gt;,
+#   FG_PCT_away &lt;dbl&gt;, FT_PCT_away &lt;dbl&gt;, FG3_PCT_away &lt;dbl&gt;, AST_away &lt;dbl&gt;,
+#   REB_away &lt;dbl&gt;, HOME_TEAM_WINS &lt;dbl&gt;</code></pre>
+<p>The data set of teams</p>
+<pre class="r"><code>teams</code></pre>
+<pre><code># A tibble: 30 x 14
+   LEAGUE_ID TEAM_ID MIN_YEAR MAX_YEAR ABBREVIATION NICKNAME YEARFOUNDED CITY 
+   &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;chr&gt;        &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;
+ 1 00         1.61e9     1949     2019 ATL          Hawks           1949 Atla…
+ 2 00         1.61e9     1946     2019 BOS          Celtics         1946 Bost…
+ 3 00         1.61e9     2002     2019 NOP          Pelicans        2002 New …
+ 4 00         1.61e9     1966     2019 CHI          Bulls           1966 Chic…
+ 5 00         1.61e9     1980     2019 DAL          Maveric…        1980 Dall…
+ 6 00         1.61e9     1976     2019 DEN          Nuggets         1976 Denv…
+ 7 00         1.61e9     1967     2019 HOU          Rockets         1967 Hous…
+ 8 00         1.61e9     1970     2019 LAC          Clippers        1970 Los …
+ 9 00         1.61e9     1948     2019 LAL          Lakers          1948 Los …
+10 00         1.61e9     1988     2019 MIA          Heat            1988 Miami
+# … with 20 more rows, and 6 more variables: ARENA &lt;chr&gt;, ARENACAPACITY &lt;dbl&gt;,
+#   OWNER &lt;chr&gt;, GENERALMANAGER &lt;chr&gt;, HEADCOACH &lt;chr&gt;,
+#   DLEAGUEAFFILIATION &lt;chr&gt;</code></pre>
+</div>
+<div id="data-wrangling" class="section level3">
+<h3>Data wrangling</h3>
+<p>Setup the edges, vertices and graphs.</p>
+<pre class="r"><code>E &lt;- games_2018 %&gt;% 
+  left_join(teams, by = c(&quot;TEAM_ID_home&quot; = &quot;TEAM_ID&quot;)) %&gt;% 
+  left_join(teams, by = c(&quot;TEAM_ID_away&quot; = &quot;TEAM_ID&quot;)) %&gt;% 
+  mutate(
+    TEAM_HOME = NICKNAME.x,
+    TEAM_AWAY = NICKNAME.y,
+    wteam = ifelse(HOME_TEAM_WINS &gt; 0, TEAM_HOME, TEAM_AWAY),
+    lteam = ifelse(HOME_TEAM_WINS == 0, TEAM_HOME, TEAM_AWAY),
+    wPTS = ifelse(HOME_TEAM_WINS &gt; 0, PTS_home, PTS_away),
+    lPTS = ifelse(HOME_TEAM_WINS == 0, PTS_home, PTS_away),
+    score_ratio = wPTS / lPTS,
+    ) %&gt;% 
+  select(lteam, wteam, score_ratio)
+
+V &lt;- teams %&gt;% 
+  filter(NICKNAME %in% unique(c(E$wteam, E$lteam))) %&gt;% 
+  select(NICKNAME)
+
+g &lt;- graph_from_data_frame(E, directed = TRUE, vertices = V)</code></pre>
+</div>
+<div id="visulization" class="section level3">
+<h3>Visulization</h3>
+<p>Let us look at how the top teams interact with each other.</p>
+<p>Subgraph that consist of top 6 teams from respectively Eastern and Western conferences.</p>
+<pre class="r"><code>top_12 &lt;- c(&quot;Bucks&quot;, &quot;Raptors&quot;, &quot;76ers&quot;, 
+  &quot;Celtics&quot;, &quot;Pacers&quot;, &quot;Nets&quot;,
+  &quot;Warriors&quot;, &quot;Nuggets&quot;, &quot;Blazers&quot;,
+  &quot;Rockets&quot;,&quot;Jazz&quot;, &quot;Thunder&quot;)</code></pre>
+<pre class="r"><code>v_top_12 &lt;- V(g)[name %in% top_12]
+a &lt;- induced_subgraph(g, vids = v_top_12)
+a &lt;- set_vertex_attr(a, &quot;pagerank&quot;, 
+  value = page_rank(a)$vector)</code></pre>
+<pre class="r"><code>library(ggnetwork)
+a_df &lt;- ggnetwork(a)</code></pre>
+<pre><code>Warning in format_fortify(model = model, nodes = nodes, weights = &quot;none&quot;, :
+duplicated edges detected</code></pre>
+<pre class="r"><code>ggplot(a_df, aes(x,y, xend = xend, yend = yend)) +
+  geom_edges(aes(alpha = score_ratio), color = &quot;lightpink&quot;,
+    arrow = arrow(length = unit(0.2, &quot;cm&quot;)), 
+    curvature = 0.2) + 
+  geom_nodes(aes(size = pagerank, color = pagerank), 
+    alpha = 0.6) +
+  geom_nodetext(aes(label = name)) + 
+  scale_alpha_continuous(range = c(0.4,1)) + 
+  scale_size_continuous(range = c(1,10)) + 
+  guides(color = guide_legend(&quot;PageRank&quot;),
+    size = guide_legend(&quot;PageRank&quot;)) + 
+  theme_blank()</code></pre>
+<p><img src="/2020/12/09/using-pagerank-to-analyze-nba-games/index_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+</div>
+<div id="analysis" class="section level3">
+<h3>Analysis</h3>
+<p>First, let us revisit the <strong>winning percentages</strong> in regular season.</p>
+<pre class="r"><code>wins &lt;- E %&gt;% count(wteam) %&gt;% arrange(desc(n))
+losses &lt;- E %&gt;% count(lteam) %&gt;% arrange(desc(n))
+win_pct &lt;- wins %&gt;% 
+  full_join(losses, by = c(&quot;wteam&quot; = &quot;lteam&quot;)) %&gt;% 
+  rename(wins = n.x, losses = n.y) %&gt;% 
+  mutate(win_pct = wins / (wins + losses)) %&gt;% 
+  arrange(desc(win_pct))
+win_pct %&gt;% head(15)</code></pre>
+<pre><code># A tibble: 15 x 4
+   wteam          wins losses win_pct
+   &lt;chr&gt;         &lt;int&gt;  &lt;int&gt;   &lt;dbl&gt;
+ 1 Bucks            63     23   0.733
+ 2 Raptors          61     25   0.709
+ 3 Warriors         58     29   0.667
+ 4 Nuggets          57     29   0.663
+ 5 Rockets          56     30   0.651
+ 6 Trail Blazers    56     31   0.644
+ 7 76ers            53     32   0.624
+ 8 Jazz             53     32   0.624
+ 9 Thunder          52     34   0.605
+10 Clippers         51     34   0.6  
+11 Spurs            51     36   0.586
+12 Celtics          50     36   0.581
+13 Pacers           50     36   0.581
+14 Nets             44     42   0.512
+15 Magic            43     43   0.5  </code></pre>
+<p>Compare that to the <strong>PageRank</strong>.</p>
+<pre class="r"><code>g &lt;- set_vertex_attr(g, &quot;pagerank&quot;, value = page_rank(g)$vector)
+as_data_frame(g, what = &quot;vertices&quot;) %&gt;% 
+  arrange(desc(pagerank)) %&gt;% 
+  mutate(pagerank = round(pagerank,5)) %&gt;% head(10)</code></pre>
+<pre><code>            name pagerank
+1          Bucks  0.04645
+2        Rockets  0.04473
+3        Thunder  0.04448
+4        Nuggets  0.04401
+5       Warriors  0.04368
+6        Raptors  0.04299
+7  Trail Blazers  0.04270
+8           Jazz  0.04109
+9          Spurs  0.04095
+10         76ers  0.03893</code></pre>
+<p>Thunder’s high ranking comes from repeatedly beating the best team in regular season.</p>
+<pre class="r"><code>E %&gt;% 
+  filter(lteam == &quot;Bucks&quot;) %&gt;% count(wteam) %&gt;% 
+  arrange(desc(n)) %&gt;% head(5)</code></pre>
+<pre><code># A tibble: 5 x 2
+  wteam         n
+  &lt;chr&gt;     &lt;int&gt;
+1 Thunder       3
+2 Suns          2
+3 76ers         1
+4 Cavaliers     1
+5 Celtics       1</code></pre>
+<p>Raptors’s losses against Bucks, Nuggets and Rockets probably explains why it is ranked lower.</p>
+<pre class="r"><code>E %&gt;% 
+  filter(lteam == &quot;Raptors&quot;) %&gt;% count(wteam) %&gt;% 
+  arrange(desc(n)) %&gt;% head(10)</code></pre>
+<pre><code># A tibble: 10 x 2
+   wteam         n
+   &lt;chr&gt;     &lt;int&gt;
+ 1 Bucks         3
+ 2 Pistons       3
+ 3 Celtics       2
+ 4 Hornets       2
+ 5 Magic         2
+ 6 Nuggets       2
+ 7 Rockets       2
+ 8 76ers         1
+ 9 Cavaliers     1
+10 Jazz          1</code></pre>
+</div>
+<div id="manual-calculation-of-pagerank" class="section level3">
+<h3>Manual calculation of PageRank</h3>
+<pre class="r"><code>P &lt;- as_adjacency_matrix(a, sparse = F, 
+  attr = &quot;score_ratio&quot;)
+P &lt;- scale(P, center = FALSE, scale = colSums(P))
+round(P,2)</code></pre>
+<pre><code>         Celtics Nuggets Rockets Bucks Nets Pacers 76ers Thunder Raptors Jazz
+Celtics     0.00    0.12    0.11  0.10 0.15   0.10  0.09    0.00    0.14 0.14
+Nuggets     0.00    0.00    0.13  0.11 0.14   0.14  0.09    0.00    0.00 0.14
+Rockets     0.00    0.13    0.00  0.11 0.14   0.11  0.12    0.11    0.00 0.16
+Bucks       0.13    0.00    0.00  0.00 0.14   0.11  0.09    0.12    0.12 0.13
+Nets        0.14    0.00    0.10  0.11 0.00   0.10  0.10    0.13    0.12 0.15
+Pacers      0.15    0.12    0.11  0.12 0.15   0.00  0.11    0.12    0.13 0.00
+76ers       0.13    0.13    0.11  0.10 0.14   0.11  0.00    0.12    0.12 0.00
+Thunder     0.13    0.13    0.10  0.00 0.00   0.10  0.09    0.00    0.12 0.00
+Raptors     0.14    0.13    0.11  0.11 0.14   0.10  0.11    0.12    0.00 0.15
+Jazz        0.00    0.13    0.12  0.11 0.00   0.13  0.10    0.13    0.12 0.00
+Warriors    0.17    0.12    0.10  0.12 0.00   0.00  0.10    0.15    0.13 0.13
+         Warriors
+Celtics      0.10
+Nuggets      0.11
+Rockets      0.10
+Bucks        0.11
+Nets         0.12
+Pacers       0.13
+76ers        0.10
+Thunder      0.12
+Raptors      0.00
+Jazz         0.11
+Warriors     0.00
+attr(,&quot;scaled:scale&quot;)
+       Celtics        Nuggets        Rockets          Bucks           Nets 
+ 7.81549125411  8.75667489628 10.27991206169 10.01233105920  7.40320149027 
+        Pacers          76ers        Thunder        Raptors           Jazz 
+10.30982770568 11.28777412755  8.78711660147  9.00794394087  7.94334247116 
+      Warriors 
+10.05666767187 </code></pre>
+<p>Initialize the probabilities.</p>
+<pre class="r"><code>v0 &lt;- rep(1, vcount(a)) / vcount(a)
+v0</code></pre>
+<pre><code> [1] 0.0909090909091 0.0909090909091 0.0909090909091 0.0909090909091
+ [5] 0.0909090909091 0.0909090909091 0.0909090909091 0.0909090909091
+ [9] 0.0909090909091 0.0909090909091 0.0909090909091</code></pre>
+<p>Multiplied by transition matrix for 100 times.</p>
+<pre class="r"><code>v &lt;- v0
+for (i in 1:100) {
+  v &lt;- P %*% v
+}
+v1 &lt;- as.vector(v)
+names(v1) &lt;- attributes(P)$dimnames[[1]]
+v1</code></pre>
+<pre><code>        Celtics         Nuggets         Rockets           Bucks            Nets 
+0.0974829621287 0.0795068608007 0.0875576404490 0.0891145192737 0.0970636575008 
+         Pacers           76ers         Thunder         Raptors            Jazz 
+0.1025784571211 0.0971855011501 0.0739601697578 0.0991380909922 0.0856872068715 
+       Warriors 
+0.0907249339544 </code></pre>
+<p>Compare that to the page_rank(). See the difference?</p>
+<pre class="r"><code>page_rank(a)$vector</code></pre>
+<pre><code>        Celtics         Nuggets         Rockets           Bucks            Nets 
+0.0878402873358 0.0930720635962 0.1037549508401 0.1070106259771 0.0696752131108 
+         Pacers           76ers         Thunder         Raptors            Jazz 
+0.0733658571978 0.0860391636477 0.1077236018745 0.0967586686002 0.0821607574415 
+       Warriors 
+0.0925988103784 </code></pre>
+<p>To prevent getting stuch, PageRank is modified by a random start. <code>Damping</code> has a default value of 0.85, which means that 1 - 0.85 = 15% of the time it will go back to initial probabilities.</p>
+<p>To make random start by hand,</p>
+<pre class="r"><code>w &lt;- v0
+d &lt;- 0.85
+for (i in 1:100) {
+  w &lt;- d * P %*% w + (1 - d) * v0
+}
+w1 &lt;- as.vector(w)
+names(w1) &lt;- attributes(P)$dimnames[[1]]
+w1</code></pre>
+<pre><code>        Celtics         Nuggets         Rockets           Bucks            Nets 
+0.0963921441484 0.0810437494559 0.0882522990737 0.0891723308752 0.0961268853143 
+         Pacers           76ers         Thunder         Raptors            Jazz 
+0.1008529612711 0.0962331179714 0.0762981707822 0.0980201369564 0.0866069129882 
+       Warriors 
+0.0910012911632 </code></pre>
+<pre><code>
+
+```r
+page_rank(a, damping = 1)$vector</code></pre>
+<pre><code>        Celtics         Nuggets         Rockets           Bucks            Nets 
+0.0870563275362 0.0943921901891 0.1059028830229 0.1091080780240 0.0660860649612 
+         Pacers           76ers         Thunder         Raptors            Jazz 
+0.0704071630226 0.0849467514414 0.1110394830720 0.0968679407902 0.0810431598174 
+       Warriors 
+0.0931499581229 </code></pre>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

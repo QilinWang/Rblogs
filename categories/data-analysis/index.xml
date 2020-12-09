@@ -6,7 +6,19 @@
     <description>Recent content in Data Analysis on A Hugo website</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 28 Oct 2020 00:00:00 +0000</lastBuildDate><atom:link href="/categories/data-analysis/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 09 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/categories/data-analysis/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Study Notes - Using Pagerank to Analyze NBA Games</title>
+      <link>/2020/12/09/using-pagerank-to-analyze-nba-games/</link>
+      <pubDate>Wed, 09 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/09/using-pagerank-to-analyze-nba-games/</guid>
+      <description>library(tidyverse) library(lubridate) library(here) library(igraph) Definitions What is network theory? According to wikipedia,
+ Network theory is the study of graphs as a representation of either symmetric relations or asymmetric relations between discrete objects.
+ What does PageRank do? It is a measure of “eigenvector centrality”.
+ In graph theory, eigenvector centrality (also called eigencentrality or prestige score) is a measure of the influence of a node in a network.</description>
+    </item>
+    
     <item>
       <title>Data Analysis with R: A Take Home Test from a Gaming Startup</title>
       <link>/2020/10/28/data-analysis-with-r-take-home-test/</link>

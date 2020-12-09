@@ -6,15 +6,28 @@
     <description>Recent content in Posts on A Hugo website</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 27 Nov 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 09 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Study Notes - Using Pagerank to Analyze NBA Games</title>
+      <link>/2020/12/09/using-pagerank-to-analyze-nba-games/</link>
+      <pubDate>Wed, 09 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/2020/12/09/using-pagerank-to-analyze-nba-games/</guid>
+      <description>library(tidyverse) library(lubridate) library(here) library(igraph) Definitions What is network theory? According to wikipedia,
+ Network theory is the study of graphs as a representation of either symmetric relations or asymmetric relations between discrete objects.
+ What does PageRank do? It is a measure of “eigenvector centrality”.
+ In graph theory, eigenvector centrality (also called eigencentrality or prestige score) is a measure of the influence of a node in a network.</description>
+    </item>
+    
     <item>
       <title>A Dive into the Kruskal-Wallis Test and its R Code</title>
       <link>/2020/11/27/a-dive-into-the-kruskal-wallis-test-and-its-r-code/</link>
       <pubDate>Fri, 27 Nov 2020 00:00:00 +0000</pubDate>
       
       <guid>/2020/11/27/a-dive-into-the-kruskal-wallis-test-and-its-r-code/</guid>
-      <description>Introduction Let the data consist of \(N = \sum_{j=1}^{k}n_{j}\) observations from the jth treatmentm j = 1,2,…k. Then the Kruskal-Wallis test is a test which measures if the medians of j population are the same. The null hypothesis is that there is no difference among the locations, and therefore the different samples can be treated as a single combined sample.
-To compute the Kruksal-Wallis statistic H, first combine N observation from the k samples and order them from least to greatest.</description>
+      <description>This is a post about statistical computing.
+In this post, I would like to talk about the following things:
+ introduce the Kruscal_Wallis test examine how to implement this code in R (stats::kruskal.test, coin::oneway_test, rstatix::kruskal_test is not written in R) examine how to improve the performance of the R code  Introduction Let the data consist of \(N = \sum_{j=1}^{k}n_{j}\) observations from the jth treatmentm j = 1,2,…k.</description>
     </item>
     
     <item>
